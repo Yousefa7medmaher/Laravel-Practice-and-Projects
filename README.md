@@ -1,7 +1,7 @@
 # Laravel Practice & Projects
 Master Laravel through hands-on examples, mini-projects, and core concept breakdowns. Designed for both beginners and intermediate developers.
 
-![Laravel Logo](laravelIcon.webp)
+![Laravel Logo](laravel.jpg)
 
 ## 🚀 Quick Start
 
