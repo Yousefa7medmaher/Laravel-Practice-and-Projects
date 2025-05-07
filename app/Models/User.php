@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -23,7 +25,7 @@ class User extends Authenticatable
         'role',
         'imgProfilePath',
     ];
-    
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -44,5 +46,23 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    /**
+     * Get the courses that the user is enrolled in.
+     */
+    public function enrolledCourses(): BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'course_user')
+            ->withPivot('status', 'enrolled_at', 'completed_at', 'final_grade')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the courses that the user teaches (as an instructor).
+     */
+    public function taughtCourses(): HasMany
+    {
+        return $this->hasMany(Course::class, 'instructor_id');
+    }
 }
 
