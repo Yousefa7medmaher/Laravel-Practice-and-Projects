@@ -1,5 +1,5 @@
 # Welcome to Joo Blog 📝
-![Joo Blog Screenshot](jooblog.png)
+![Joo Blog Screenshot](CRUD-APP/jooblog.png)
 
 Joo Blog is a simple Laravel-based blogging system built to practice and demonstrate CRUD (Create, Read, Update, Delete) operations.  
 This project is part of my Laravel learning journey and serves as a hands-on implementation of key backend concepts.
