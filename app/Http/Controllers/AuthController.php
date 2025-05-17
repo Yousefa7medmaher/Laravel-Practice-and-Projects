@@ -52,10 +52,22 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Determine redirect URL based on user role
+        $redirectUrl = '/';
+        if ($user->role === 'manager') {
+            $redirectUrl = '/dashboard';
+        } elseif ($user->role === 'instructor') {
+            $redirectUrl = '/courses'; // Instructors see courses they teach
+        } elseif ($user->role === 'student') {
+            $redirectUrl = '/courses'; // Students see their enrolled courses
+        }
+
         return response()->json([
             'user' => $user,
             'access_token' => $token,
             'token_type' => 'Bearer',
+            'role' => $user->role,
+            'redirect_url' => $redirectUrl
         ]);
     }
 
