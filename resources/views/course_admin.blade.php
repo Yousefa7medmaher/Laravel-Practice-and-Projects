@@ -236,6 +236,72 @@
         </div>
     </div>
 
+    <!-- Course Modal Template (hidden, used for restoring modal content) -->
+    <template id="course-modal-template">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800" id="modal-title">Add New Course</h3>
+            <button id="close-modal" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form id="course-form" enctype="multipart/form-data">
+            <input type="hidden" id="course-id">
+            <div class="mb-4">
+                <label for="title" class="block text-gray-700 font-medium mb-2">Course Title</label>
+                <input type="text" id="title" name="title" class="w-full px-4 py-2 border rounded-lg" required>
+            </div>
+            <div class="mb-4">
+                <label for="code" class="block text-gray-700 font-medium mb-2">Course Code</label>
+                <input type="text" id="code" name="code" class="w-full px-4 py-2 border rounded-lg" required>
+            </div>
+            <div class="mb-4">
+                <label for="description" class="block text-gray-700 font-medium mb-2">Description</label>
+                <textarea id="description" name="description" rows="3" class="w-full px-4 py-2 border rounded-lg" required></textarea>
+            </div>
+            <div class="mb-4">
+                <label for="credit_hours" class="block text-gray-700 font-medium mb-2">Credit Hours</label>
+                <input type="number" id="credit_hours" name="credit_hours" min="1" max="6" class="w-full px-4 py-2 border rounded-lg" required>
+            </div>
+            <div class="mb-4">
+                <label for="status" class="block text-gray-700 font-medium mb-2">Status</label>
+                <select id="status" name="status" class="w-full px-4 py-2 border rounded-lg" required>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="archived">Archived</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label for="image" class="block text-gray-700 font-medium mb-2">Course Image</label>
+                <input type="file" id="image" name="image" accept="image/*" class="w-full px-4 py-2 border rounded-lg">
+                <p class="text-sm text-gray-500 mt-1">Recommended size: 1200x600 pixels. Max size: 2MB.</p>
+
+                <!-- Image preview container -->
+                <div id="image-preview-container" class="mt-3 hidden">
+                    <p class="text-sm font-medium text-gray-700 mb-1">Image Preview:</p>
+                    <div class="relative">
+                        <img id="image-preview" src="#" alt="Course image preview" class="max-h-40 rounded-lg border">
+                        <button type="button" id="remove-image" class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Current image display (for edit mode) -->
+                <div id="current-image-container" class="mt-3 hidden">
+                    <p class="text-sm font-medium text-gray-700 mb-1">Current Image:</p>
+                    <div class="relative">
+                        <img id="current-image" src="#" alt="Current course image" class="max-h-40 rounded-lg border">
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button type="button" id="cancel-btn" class="px-4 py-2 border rounded-md text-gray-700 mr-2">Cancel</button>
+                <button type="submit" id="save-course-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md">Save Course</button>
+            </div>
+        </form>
+    </template>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Auth token handling
@@ -259,7 +325,7 @@
 
                 return fetch(url, {
                     ...options,
-                    headers
+                    headers: headers
                 });
             }
 
@@ -311,14 +377,28 @@
             // Load courses from API
             function loadCourses(page = 1, search = '', status = '') {
                 const tableBody = document.getElementById('courses-table-body');
-                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Loading...</td></tr>';
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-8">
+                            <div class="flex justify-center items-center">
+                                <i class="fas fa-spinner fa-spin text-indigo-600 text-2xl mr-3"></i>
+                                <span class="text-gray-600">Loading courses...</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
 
                 let url = `/api/courses?page=${page}`;
-                if (search) url += `&search=${search}`;
-                if (status) url += `&status=${status}`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (status) url += `&status=${encodeURIComponent(status)}`;
 
                 fetchWithAuth(url)
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to load courses');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.data && data.data.length > 0) {
                             tableBody.innerHTML = '';
@@ -335,7 +415,7 @@
                                                     <i class="fas fa-book text-gray-400"></i>
                                                 </div>`
                                             }
-                                            <span>${course.title}</span>
+                                            <span class="font-medium">${course.title}</span>
                                         </div>
                                     </td>
                                     <td class="py-3 px-6 text-left">${course.code}</td>
@@ -348,11 +428,11 @@
                                     <td class="py-3 px-6 text-center">
                                         <div class="flex item-center justify-center">
                                             <button class="edit-btn mr-3 transform hover:text-blue-500 hover:scale-110"
-                                                    data-id="${course.id}">
+                                                    data-id="${course.id}" title="Edit course">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             <button class="delete-btn transform hover:text-red-500 hover:scale-110"
-                                                    data-id="${course.id}">
+                                                    data-id="${course.id}" title="Delete course">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </div>
@@ -373,12 +453,44 @@
                             // Update pagination
                             updatePagination(data.meta);
                         } else {
-                            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No courses found</td></tr>';
+                            // No courses found
+                            tableBody.innerHTML = `
+                                <tr>
+                                    <td colspan="5" class="text-center py-8">
+                                        <div class="flex flex-col items-center justify-center text-gray-500">
+                                            <i class="fas fa-search text-4xl mb-3"></i>
+                                            <p class="text-lg">No courses found</p>
+                                            ${search || status ?
+                                                `<p class="text-sm mt-1">Try adjusting your search or filter criteria</p>` :
+                                                `<p class="text-sm mt-1">Click "Add New Course" to create your first course</p>`
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
                         }
                     })
                     .catch(error => {
                         console.error('Error loading courses:', error);
-                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading courses</td></tr>';
+                        tableBody.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="text-center py-8">
+                                    <div class="flex flex-col items-center justify-center text-red-500">
+                                        <i class="fas fa-exclamation-circle text-4xl mb-3"></i>
+                                        <p class="text-lg">Error loading courses</p>
+                                        <p class="text-sm mt-1">Please try again later or contact support</p>
+                                        <button id="retry-load" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                                            <i class="fas fa-sync-alt mr-2"></i> Retry
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+
+                        // Add event listener to retry button
+                        document.getElementById('retry-load')?.addEventListener('click', () => {
+                            loadCourses(page, search, status);
+                        });
                     });
             }
 
@@ -443,41 +555,111 @@
 
             // Edit course
             function editCourse(id) {
+                // Show loading state in modal
+                const modal = document.getElementById('course-modal');
+                const modalContent = modal.querySelector('.bg-white');
+
+                // Show modal with loading state
+                modal.classList.remove('hidden');
+                modalContent.innerHTML = `
+                    <div class="p-6 flex flex-col items-center justify-center">
+                        <i class="fas fa-spinner fa-spin text-indigo-600 text-3xl mb-4"></i>
+                        <p class="text-gray-700">Loading course details...</p>
+                    </div>
+                `;
+
                 fetchWithAuth(`/api/courses/${id}`)
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to load course details');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.data) {
-                            const course = data.data;
-                            document.getElementById('course-id').value = course.id;
-                            document.getElementById('title').value = course.title;
-                            document.getElementById('code').value = course.code;
-                            document.getElementById('description').value = course.description;
-                            document.getElementById('credit_hours').value = course.credit_hours || '';
-                            document.getElementById('status').value = course.status || 'active';
+                            // Reset modal content
+                            modal.classList.add('hidden');
 
-                            // Handle image display
-                            const currentImageContainer = document.getElementById('current-image-container');
-                            const currentImage = document.getElementById('current-image');
-                            const imagePreviewContainer = document.getElementById('image-preview-container');
+                            // Restore original modal content (this is a bit of a hack, but works for this case)
+                            setTimeout(() => {
+                                modalContent.innerHTML = document.getElementById('course-modal-template').innerHTML;
 
-                            // Reset image preview
-                            imagePreviewContainer.classList.add('hidden');
+                                // Now populate the form
+                                const course = data.data;
+                                document.getElementById('course-id').value = course.id;
+                                document.getElementById('title').value = course.title;
+                                document.getElementById('code').value = course.code;
+                                document.getElementById('description').value = course.description;
+                                document.getElementById('credit_hours').value = course.credit_hours || '';
+                                document.getElementById('status').value = course.status || 'active';
 
-                            // Show current image if it exists
-                            if (course.image_path) {
-                                currentImage.src = '/' + course.image_path;
-                                currentImageContainer.classList.remove('hidden');
-                            } else {
-                                currentImageContainer.classList.add('hidden');
-                            }
+                                // Handle image display
+                                const currentImageContainer = document.getElementById('current-image-container');
+                                const currentImage = document.getElementById('current-image');
+                                const imagePreviewContainer = document.getElementById('image-preview-container');
 
-                            document.getElementById('modal-title').textContent = 'Edit Course';
-                            document.getElementById('course-modal').classList.remove('hidden');
+                                // Reset image preview
+                                imagePreviewContainer.classList.add('hidden');
+
+                                // Show current image if it exists
+                                if (course.image_path) {
+                                    currentImage.src = '/' + course.image_path;
+                                    currentImageContainer.classList.remove('hidden');
+                                } else {
+                                    currentImageContainer.classList.add('hidden');
+                                }
+
+                                document.getElementById('modal-title').textContent = 'Edit Course';
+                                modal.classList.remove('hidden');
+
+                                // Re-attach event listeners
+                                document.getElementById('close-modal').addEventListener('click', () => {
+                                    modal.classList.add('hidden');
+                                });
+
+                                document.getElementById('cancel-btn').addEventListener('click', () => {
+                                    modal.classList.add('hidden');
+                                });
+
+                                document.getElementById('course-form').addEventListener('submit', (e) => {
+                                    e.preventDefault();
+                                    saveCourse();
+                                });
+
+                                // Image preview functionality
+                                const imageInput = document.getElementById('image');
+                                const imagePreview = document.getElementById('image-preview');
+
+                                // Show preview when image is selected
+                                imageInput.addEventListener('change', function() {
+                                    if (this.files && this.files[0]) {
+                                        const reader = new FileReader();
+                                        reader.onload = function(e) {
+                                            imagePreview.src = e.target.result;
+                                            imagePreviewContainer.classList.remove('hidden');
+                                            currentImageContainer.classList.add('hidden');
+                                        }
+                                        reader.readAsDataURL(this.files[0]);
+                                    }
+                                });
+
+                                // Remove selected image
+                                document.getElementById('remove-image').addEventListener('click', function() {
+                                    imageInput.value = '';
+                                    imagePreviewContainer.classList.add('hidden');
+
+                                    // Show current image again if it exists
+                                    if (course.image_path) {
+                                        currentImageContainer.classList.remove('hidden');
+                                    }
+                                });
+                            }, 100);
                         }
                     })
                     .catch(error => {
                         console.error('Error fetching course:', error);
-                        alert('Error loading course details');
+                        modal.classList.add('hidden');
+                        showNotification('Error loading course details: ' + error.message, 'error');
                     });
             }
 
@@ -492,23 +674,36 @@
 
             // Delete course
             function deleteCourse(id) {
+                // Show loading state in delete button
+                const deleteButton = document.getElementById('confirm-delete');
+                const originalButtonText = deleteButton.innerHTML;
+                deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Deleting...';
+                deleteButton.disabled = true;
+
                 fetchWithAuth(`/api/courses/${id}`, {
                     method: 'DELETE'
                 })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Failed to delete course');
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.message || 'Failed to delete course');
+                        });
                     }
                     return response.json();
                 })
-                .then(() => {
+                .then((data) => {
                     document.getElementById('delete-modal').classList.add('hidden');
                     loadCourses(); // Reload courses
-                    alert('Course deleted successfully');
+                    showNotification('Course deleted successfully', 'success');
                 })
                 .catch(error => {
                     console.error('Error deleting course:', error);
-                    alert('Error deleting course');
+                    showNotification(error.message || 'Error deleting course', 'error');
+                })
+                .finally(() => {
+                    // Reset button state
+                    deleteButton.innerHTML = originalButtonText;
+                    deleteButton.disabled = false;
                 });
             }
 
@@ -532,7 +727,7 @@
                 }
 
                 const url = isEdit ? `/api/courses/${courseId}` : '/api/courses';
-                const method = isEdit ? 'POST' : 'POST'; // Use POST for FormData with _method for PUT
+                const method = 'POST'; // Always use POST for FormData
 
                 // For PUT requests with FormData, we need to use the _method parameter
                 if (isEdit) {
@@ -546,6 +741,12 @@
                     headers['Authorization'] = `Bearer ${token}`;
                 }
 
+                // Show loading state
+                const saveButton = document.getElementById('save-course-btn');
+                const originalButtonText = saveButton.innerHTML;
+                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+                saveButton.disabled = true;
+
                 fetch(url, {
                     method: method,
                     headers: headers,
@@ -553,7 +754,9 @@
                 })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Failed to save course');
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.message || 'Failed to save course');
+                        });
                     }
                     return response.json();
                 })
@@ -566,39 +769,133 @@
                     document.getElementById('current-image-container').classList.add('hidden');
 
                     loadCourses(); // Reload courses
-                    alert(isEdit ? 'Course updated successfully' : 'Course created successfully');
+
+                    // Show success message
+                    const successMessage = isEdit ? 'Course updated successfully' : 'Course created successfully';
+                    showNotification(successMessage, 'success');
                 })
                 .catch(error => {
                     console.error('Error saving course:', error);
-                    alert('Error saving course: ' + error.message);
+                    showNotification(error.message || 'Error saving course', 'error');
+                })
+                .finally(() => {
+                    // Reset button state
+                    saveButton.innerHTML = originalButtonText;
+                    saveButton.disabled = false;
                 });
+            }
+
+            // Show notification function
+            function showNotification(message, type = 'info') {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                    type === 'success' ? 'bg-green-500 text-white' :
+                    type === 'error' ? 'bg-red-500 text-white' :
+                    'bg-blue-500 text-white'
+                }`;
+
+                notification.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-${
+                            type === 'success' ? 'check-circle' :
+                            type === 'error' ? 'exclamation-circle' :
+                            'info-circle'
+                        } mr-2"></i>
+                        <span>${message}</span>
+                    </div>
+                `;
+
+                document.body.appendChild(notification);
+
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    notification.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 500);
+                }, 3000);
             }
 
             // Modal functionality
             const courseModal = document.getElementById('course-modal');
             const addCourseBtn = document.getElementById('add-course-btn');
-            const closeModalBtn = document.getElementById('close-modal');
-            const cancelBtn = document.getElementById('cancel-btn');
-            const courseForm = document.getElementById('course-form');
 
+            // Initialize the course modal with the template content
+            function initializeCourseModal() {
+                const modalContent = courseModal.querySelector('.bg-white');
+                modalContent.innerHTML = document.getElementById('course-modal-template').innerHTML;
+
+                const closeModalBtn = document.getElementById('close-modal');
+                const cancelBtn = document.getElementById('cancel-btn');
+                const courseForm = document.getElementById('course-form');
+
+                closeModalBtn.addEventListener('click', () => {
+                    courseModal.classList.add('hidden');
+                });
+
+                cancelBtn.addEventListener('click', () => {
+                    courseModal.classList.add('hidden');
+                });
+
+                courseForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    saveCourse();
+                });
+
+                // Image preview functionality
+                const imageInput = document.getElementById('image');
+                const imagePreview = document.getElementById('image-preview');
+                const imagePreviewContainer = document.getElementById('image-preview-container');
+                const removeImageBtn = document.getElementById('remove-image');
+
+                imageInput.addEventListener('change', function() {
+                    const currentImageContainer = document.getElementById('current-image-container');
+                    currentImageContainer.classList.add('hidden');
+
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            imagePreview.src = e.target.result;
+                            imagePreviewContainer.classList.remove('hidden');
+                        }
+                        reader.readAsDataURL(this.files[0]);
+                    } else {
+                        imagePreviewContainer.classList.add('hidden');
+                    }
+                });
+
+                removeImageBtn.addEventListener('click', function() {
+                    imageInput.value = '';
+                    imagePreviewContainer.classList.add('hidden');
+
+                    // Show current image again if in edit mode
+                    const courseId = document.getElementById('course-id').value;
+                    if (courseId) {
+                        const currentImageContainer = document.getElementById('current-image-container');
+                        if (currentImageContainer.querySelector('img').src) {
+                            currentImageContainer.classList.remove('hidden');
+                        }
+                    }
+                });
+            }
+
+            // Add new course button click handler
             addCourseBtn.addEventListener('click', () => {
+                // Initialize the modal
+                initializeCourseModal();
+
+                // Reset form and set for adding new course
                 document.getElementById('course-id').value = '';
                 document.getElementById('course-form').reset();
                 document.getElementById('modal-title').textContent = 'Add New Course';
+
+                // Hide image containers
+                document.getElementById('image-preview-container').classList.add('hidden');
+                document.getElementById('current-image-container').classList.add('hidden');
+
+                // Show the modal
                 courseModal.classList.remove('hidden');
-            });
-
-            closeModalBtn.addEventListener('click', () => {
-                courseModal.classList.add('hidden');
-            });
-
-            cancelBtn.addEventListener('click', () => {
-                courseModal.classList.add('hidden');
-            });
-
-            courseForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                saveCourse();
             });
 
             // Search and filter functionality
@@ -626,47 +923,7 @@
                 };
             }
 
-            // Image preview functionality
-            const imageInput = document.getElementById('image');
-            const imagePreview = document.getElementById('image-preview');
-            const imagePreviewContainer = document.getElementById('image-preview-container');
-            const removeImageBtn = document.getElementById('remove-image');
 
-            // Show preview when image is selected
-            imageInput.addEventListener('change', function() {
-                const currentImageContainer = document.getElementById('current-image-container');
-
-                // Hide current image container when new image is selected
-                currentImageContainer.classList.add('hidden');
-
-                if (this.files && this.files[0]) {
-                    const reader = new FileReader();
-
-                    reader.onload = function(e) {
-                        imagePreview.src = e.target.result;
-                        imagePreviewContainer.classList.remove('hidden');
-                    }
-
-                    reader.readAsDataURL(this.files[0]);
-                } else {
-                    imagePreviewContainer.classList.add('hidden');
-                }
-            });
-
-            // Remove selected image
-            removeImageBtn.addEventListener('click', function() {
-                imageInput.value = '';
-                imagePreviewContainer.classList.add('hidden');
-
-                // Show current image again if in edit mode
-                const courseId = document.getElementById('course-id').value;
-                if (courseId) {
-                    const currentImageContainer = document.getElementById('current-image-container');
-                    if (currentImageContainer.querySelector('img').src) {
-                        currentImageContainer.classList.remove('hidden');
-                    }
-                }
-            });
 
             // Sidebar toggle functionality
             const sidebarToggle = document.getElementById('sidebar-toggle');
