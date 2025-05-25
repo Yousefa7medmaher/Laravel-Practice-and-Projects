@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Create Lecture API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">
+            <i class="fas fa-video text-blue-600 mr-2"></i>
+            Test Create Lecture API
+        </h1>
+
+        <form id="lectureForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-heading mr-1"></i>Lecture Title *
+                </label>
+                <input type="text" id="title" required
+                       class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Enter lecture title">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-align-left mr-1"></i>Description
+                </label>
+                <textarea id="description" rows="4"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Describe the lecture content"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-list-ol mr-1"></i>Learning Objectives
+                </label>
+                <textarea id="objectives" rows="3"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="What will students learn?"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-clock mr-1"></i>Duration (minutes)
+                    </label>
+                    <input type="number" id="duration" min="1" max="600"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="60">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-calendar mr-1"></i>Scheduled Date
+                    </label>
+                    <input type="datetime-local" id="scheduled_date"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-video mr-1"></i>Video URL (Optional)
+                </label>
+                <input type="url" id="video_url"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="https://youtube.com/watch?v=...">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-paperclip mr-1"></i>Lecture File (Optional)
+                </label>
+                <input type="file" id="file"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       accept=".pdf,.doc,.docx,.ppt,.pptx,.zip">
+                <p class="text-xs text-gray-500 mt-1">Supported formats: PDF, DOC, DOCX, PPT, PPTX, ZIP (Max: 10MB)</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h4 class="font-medium text-gray-900 mb-3">
+                    <i class="fas fa-cog mr-1"></i>Lecture Settings
+                </h4>
+                <div class="flex items-center">
+                    <input type="checkbox" id="is_visible" class="rounded mr-2" checked>
+                    <label for="is_visible" class="text-sm text-gray-700">Visible to students</label>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                <button type="button" onclick="clearForm()"
+                        class="px-6 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Clear
+                </button>
+                <button type="submit"
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Create Lecture
+                </button>
+            </div>
+        </form>
+
+        <div id="result" class="mt-6 hidden"></div>
+    </div>
+
+    <script>
+        // Test configuration
+        const API_BASE = 'http://127.0.0.1:8001/api';
+        const COURSE_ID = 7; // Test course ID
+        const TOKEN = 'your-jwt-token-here'; // You'll need to get this from login
+
+        // API call function
+        async function apiCall(endpoint, method = 'GET', data = null, isFormData = false) {
+            const url = `${API_BASE}${endpoint}`;
+            const options = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${TOKEN}`,
+                    'Accept': 'application/json',
+                }
+            };
+
+            if (data) {
+                if (isFormData) {
+                    options.body = data;
+                } else {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(data);
+                }
+            }
+
+            try {
+                const response = await fetch(url, options);
+                const result = await response.json();
+                
+                return {
+                    ok: response.ok,
+                    status: response.status,
+                    data: result
+                };
+            } catch (error) {
+                console.error('API call error:', error);
+                return {
+                    ok: false,
+                    status: 0,
+                    data: { message: 'Network error' }
+                };
+            }
+        }
+
+        // Form submission handler
+        document.getElementById('lectureForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+            submitBtn.disabled = true;
+
+            try {
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('title', document.getElementById('title').value);
+                formData.append('description', document.getElementById('description').value);
+                formData.append('objectives', document.getElementById('objectives').value);
+                formData.append('duration', document.getElementById('duration').value || 60);
+                formData.append('scheduled_date', document.getElementById('scheduled_date').value);
+                formData.append('video_url', document.getElementById('video_url').value);
+                formData.append('is_visible', document.getElementById('is_visible').checked);
+
+                const fileInput = document.getElementById('file');
+                if (fileInput.files[0]) {
+                    formData.append('file', fileInput.files[0]);
+                }
+
+                // Make API call
+                const result = await apiCall(`/instructor/courses/${COURSE_ID}/lectures`, 'POST', formData, true);
+                
+                // Display result
+                showResult(result);
+
+            } catch (error) {
+                console.error('Error creating lecture:', error);
+                showResult({
+                    ok: false,
+                    data: { message: 'Error creating lecture: ' + error.message }
+                });
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showResult(result) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.classList.remove('hidden');
+            
+            if (result.ok) {
+                resultDiv.innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                            <h3 class="text-green-800 font-medium">Lecture Created Successfully!</h3>
+                        </div>
+                        <div class="mt-2 text-sm text-green-700">
+                            <p><strong>Title:</strong> ${result.data.data?.title || 'N/A'}</p>
+                            <p><strong>ID:</strong> ${result.data.data?.id || 'N/A'}</p>
+                            <p><strong>Course ID:</strong> ${result.data.data?.course_id || 'N/A'}</p>
+                        </div>
+                        <pre class="mt-3 text-xs bg-green-100 p-2 rounded overflow-auto">${JSON.stringify(result.data, null, 2)}</pre>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-circle text-red-600 mr-2"></i>
+                            <h3 class="text-red-800 font-medium">Error Creating Lecture</h3>
+                        </div>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p><strong>Status:</strong> ${result.status}</p>
+                            <p><strong>Message:</strong> ${result.data?.message || 'Unknown error'}</p>
+                        </div>
+                        <pre class="mt-3 text-xs bg-red-100 p-2 rounded overflow-auto">${JSON.stringify(result.data, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('lectureForm').reset();
+            document.getElementById('result').classList.add('hidden');
+        }
+
+        // Set default scheduled date to tomorrow
+        document.addEventListener('DOMContentLoaded', function() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(10, 0, 0, 0);
+            document.getElementById('scheduled_date').value = tomorrow.toISOString().slice(0, 16);
+        });
+    </script>
+</body>
+</html>

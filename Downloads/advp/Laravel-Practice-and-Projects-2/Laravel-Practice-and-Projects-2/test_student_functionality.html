@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Login & Dashboard Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .results {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .credentials {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Student Login & Dashboard Test Suite</h1>
+        
+        <div class="credentials">
+            <h3>Test Credentials</h3>
+            <p><strong>Email:</strong> student@test.com</p>
+            <p><strong>Password:</strong> password123</p>
+            <p><strong>Role:</strong> student</p>
+        </div>
+
+        <!-- Login Test Section -->
+        <div class="test-section">
+            <h2>1. Student Login Test</h2>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" value="student@test.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" value="password123">
+            </div>
+            <button onclick="testLogin()">Test Login</button>
+            <button onclick="testLogout()">Test Logout</button>
+            <div id="loginResults" class="results"></div>
+        </div>
+
+        <!-- Dashboard API Tests -->
+        <div class="test-section">
+            <h2>2. Student Dashboard API Tests</h2>
+            <button onclick="testEnrolledCourses()">Test Enrolled Courses</button>
+            <button onclick="testUpcomingAssignments()">Test Upcoming Assignments</button>
+            <button onclick="testUpcomingQuizzes()">Test Upcoming Quizzes</button>
+            <button onclick="testRecentActivity()">Test Recent Activity</button>
+            <button onclick="testAllDashboardAPIs()">Test All Dashboard APIs</button>
+            <div id="dashboardResults" class="results"></div>
+        </div>
+
+        <!-- Profile Test -->
+        <div class="test-section">
+            <h2>3. Profile Test</h2>
+            <button onclick="testProfile()">Test Get Profile</button>
+            <div id="profileResults" class="results"></div>
+        </div>
+
+        <!-- Course Content Tests -->
+        <div class="test-section">
+            <h2>4. Course Content Tests</h2>
+            <button onclick="testCourseContent()">Test Course Content APIs</button>
+            <div id="courseContentResults" class="results"></div>
+        </div>
+
+        <!-- Navigation Test -->
+        <div class="test-section">
+            <h2>5. Navigation Test</h2>
+            <button onclick="openStudentDashboard()">Open Student Dashboard</button>
+            <button onclick="openLoginPage()">Open Login Page</button>
+            <button onclick="openCoursesPage()">Open Courses Page</button>
+            <div id="navigationResults" class="results"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8001/api';
+        let authToken = null;
+
+        // Utility function to make API calls
+        async function apiCall(endpoint, method = 'GET', data = null, useAuth = true) {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+
+            if (useAuth && authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            const config = {
+                method,
+                headers
+            };
+
+            if (data) {
+                config.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, config);
+                const result = await response.json();
+                return {
+                    status: response.status,
+                    ok: response.ok,
+                    data: result
+                };
+            } catch (error) {
+                return {
+                    status: 0,
+                    ok: false,
+                    error: error.message
+                };
+            }
+        }
+
+        // Test login functionality
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultsDiv = document.getElementById('loginResults');
+
+            resultsDiv.textContent = 'Testing login...';
+
+            const result = await apiCall('/login', 'POST', { email, password }, false);
+
+            if (result.ok) {
+                authToken = result.data.access_token;
+                resultsDiv.textContent = `✅ Login successful!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`;
+                resultsDiv.className = 'results success';
+                
+                // Store token in localStorage for dashboard testing
+                localStorage.setItem('token', authToken);
+            } else {
+                resultsDiv.textContent = `❌ Login failed!\n\nError:\n${JSON.stringify(result, null, 2)}`;
+                resultsDiv.className = 'results error';
+            }
+        }
+
+        // Test logout functionality
+        async function testLogout() {
+            const resultsDiv = document.getElementById('loginResults');
+
+            if (!authToken) {
+                resultsDiv.textContent = '❌ No auth token available. Please login first.';
+                resultsDiv.className = 'results error';
+                return;
+            }
+
+            resultsDiv.textContent = 'Testing logout...';
+
+            const result = await apiCall('/logout', 'POST');
+
+            if (result.ok) {
+                authToken = null;
+                localStorage.removeItem('token');
+                resultsDiv.textContent = `✅ Logout successful!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`;
+                resultsDiv.className = 'results success';
+            } else {
+                resultsDiv.textContent = `❌ Logout failed!\n\nError:\n${JSON.stringify(result, null, 2)}`;
+                resultsDiv.className = 'results error';
+            }
+        }
+
+        // Test enrolled courses API
+        async function testEnrolledCourses() {
+            const resultsDiv = document.getElementById('dashboardResults');
+            
+            if (!authToken) {
+                resultsDiv.textContent = '❌ Please login first to test dashboard APIs.';
+                resultsDiv.className = 'results error';
+                return;
+            }
+
+            resultsDiv.textContent = 'Testing enrolled courses API...';
+
+            const result = await apiCall('/student/enrolled-courses');
+
+            if (result.ok) {
+                resultsDiv.textContent = `✅ Enrolled Courses API successful!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`;
+                resultsDiv.className = 'results success';
+            } else {
+                resultsDiv.textContent = `❌ Enrolled Courses API failed!\n\nError:\n${JSON.stringify(result, null, 2)}`;
+                resultsDiv.className = 'results error';
+            }
+        }
+
+        // Test upcoming assignments API
+        async function testUpcomingAssignments() {
+            const resultsDiv = document.getElementById('dashboardResults');
+            
+            if (!authToken) {
+                resultsDiv.textContent = '❌ Please login first to test dashboard APIs.';
+                resultsDiv.className = 'results error';
+                return;
+            }
+
+            resultsDiv.textContent = 'Testing upcoming assignments API...';
+
+            const result = await apiCall('/student/upcoming-assignments');
+
+            if (result.ok) {
+                resultsDiv.textContent = `✅ Upcoming Assignments API successful!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`;
+                resultsDiv.className = 'results success';
+            } else {
+                resultsDiv.textContent = `❌ Upcoming Assignments API failed!\n\nError:\n${JSON.stringify(result, null, 2)}`;
+                resultsDiv.className = 'results error';
+            }
+        }
+
+        // Test upcoming quizzes API
+        async function testUpcomingQuizzes() {
+            const resultsDiv = document.getElementById('dashboardResults');
+            
+            if (!authToken) {
+                resultsDiv.textContent = '❌ Please login first to test dashboard APIs.';
+                resultsDiv.className = 'results error';
+                return;
+            }
+
+            resultsDiv.textContent = 'Testing upcoming quizzes API...';
+
+            const result = await apiCall('/student/upcoming-quizzes');
+
+            if (result.ok) {
+                resultsDiv.textContent = `✅ Upcoming Quizzes API successful!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`;
+                resultsDiv.className = 'results success';
+            } else {
+                resultsDiv.textContent = `❌ Upcoming Quizzes API failed!\n\nError:\n${JSON.stringify(result, null, 2)}`;
+                resultsDiv.className = 'results error';
+            }
+        }
+
+        // Test recent activity API
+        async function testRecentActivity() {
+            const resultsDiv = document.getElementById('dashboardResults');
+            
+            if (!authToken) {
+                resultsDiv.textContent = '❌ Please login first to test dashboard APIs.';
+                resultsDiv.className = 'results error';
+                return;
+            }
+
+            resultsDiv.textContent = 'Testing recent activity API...';
+
+            const result = await apiCall('/student/recent-activity');
+
+            if (result.ok) {
+                resultsDiv.textContent = `✅ Recent Activity API successful!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`;
+                resultsDiv.className = 'results success';
+            } else {
+                resultsDiv.textContent = `❌ Recent Activity API failed!\n\nError:\n${JSON.stringify(result, null, 2)}`;
+                resultsDiv.className = 'results error';
+            }
+        }
+
+        // Test all dashboard APIs
+        async function testAllDashboardAPIs() {
+            const resultsDiv = document.getElementById('dashboardResults');
+            
+            if (!authToken) {
+                resultsDiv.textContent = '❌ Please login first to test dashboard APIs.';
+                resultsDiv.className = 'results error';
+                return;
+            }
+
+            resultsDiv.textContent = 'Testing all dashboard APIs...\n\n';
+
+            const apis = [
+                { name: 'Enrolled Courses', endpoint: '/student/enrolled-courses' },
+                { name: 'Upcoming Assignments', endpoint: '/student/upcoming-assignments' },
+                { name: 'Upcoming Quizzes', endpoint: '/student/upcoming-quizzes' },
+                { name: 'Recent Activity', endpoint: '/student/recent-activity' }
+            ];
+
+            let allResults = '';
+
+            for (const api of apis) {
+                const result = await apiCall(api.endpoint);
+                const status = result.ok ? '✅' : '❌';
+                allResults += `${status} ${api.name}: ${result.ok ? 'SUCCESS' : 'FAILED'}\n`;
+                
+                if (result.ok) {
+                    allResults += `   Data count: ${Array.isArray(result.data.data) ? result.data.data.length : 'N/A'}\n`;
+                } else {
+                    allResults += `   Error: ${result.data?.message || 'Unknown error'}\n`;
+                }
+                allResults += '\n';
+            }
+
+            resultsDiv.textContent = allResults;
+            resultsDiv.className = 'results info';
+        }
+
+        // Test profile API
+        async function testProfile() {
+            const resultsDiv = document.getElementById('profileResults');
+            
+            if (!authToken) {
+                resultsDiv.textContent = '❌ Please login first to test profile API.';
+                resultsDiv.className = 'results error';
+                return;
+            }
+
+            resultsDiv.textContent = 'Testing profile API...';
+
+            const result = await apiCall('/profile');
+
+            if (result.ok) {
+                resultsDiv.textContent = `✅ Profile API successful!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`;
+                resultsDiv.className = 'results success';
+            } else {
+                resultsDiv.textContent = `❌ Profile API failed!\n\nError:\n${JSON.stringify(result, null, 2)}`;
+                resultsDiv.className = 'results error';
+            }
+        }
+
+        // Test course content APIs
+        async function testCourseContent() {
+            const resultsDiv = document.getElementById('courseContentResults');
+            
+            if (!authToken) {
+                resultsDiv.textContent = '❌ Please login first to test course content APIs.';
+                resultsDiv.className = 'results error';
+                return;
+            }
+
+            resultsDiv.textContent = 'Testing course content APIs...\n\n';
+
+            // First get enrolled courses to get course IDs
+            const coursesResult = await apiCall('/student/enrolled-courses');
+            
+            if (!coursesResult.ok || !coursesResult.data.data || coursesResult.data.data.length === 0) {
+                resultsDiv.textContent = '❌ No enrolled courses found to test course content APIs.';
+                resultsDiv.className = 'results error';
+                return;
+            }
+
+            const firstCourse = coursesResult.data.data[0];
+            const courseId = firstCourse.id;
+
+            let allResults = `Testing with Course: ${firstCourse.title} (ID: ${courseId})\n\n`;
+
+            const apis = [
+                { name: 'Course Lectures', endpoint: `/courses/${courseId}/lectures` },
+                { name: 'Course Assignments', endpoint: `/courses/${courseId}/assignments` },
+                { name: 'Course Quizzes', endpoint: `/courses/${courseId}/quizzes` },
+                { name: 'Course Labs', endpoint: `/courses/${courseId}/labs` },
+                { name: 'Course Content All', endpoint: `/course-content/courses/${courseId}/all` }
+            ];
+
+            for (const api of apis) {
+                const result = await apiCall(api.endpoint);
+                const status = result.ok ? '✅' : '❌';
+                allResults += `${status} ${api.name}: ${result.ok ? 'SUCCESS' : 'FAILED'}\n`;
+                
+                if (result.ok) {
+                    allResults += `   Data count: ${Array.isArray(result.data.data) ? result.data.data.length : 'N/A'}\n`;
+                } else {
+                    allResults += `   Error: ${result.data?.message || 'Unknown error'}\n`;
+                }
+                allResults += '\n';
+            }
+
+            resultsDiv.textContent = allResults;
+            resultsDiv.className = 'results info';
+        }
+
+        // Navigation functions
+        function openStudentDashboard() {
+            window.open('http://127.0.0.1:8001/dashboard', '_blank');
+            document.getElementById('navigationResults').textContent = '✅ Opened student dashboard in new tab';
+            document.getElementById('navigationResults').className = 'results success';
+        }
+
+        function openLoginPage() {
+            window.open('http://127.0.0.1:8001/login', '_blank');
+            document.getElementById('navigationResults').textContent = '✅ Opened login page in new tab';
+            document.getElementById('navigationResults').className = 'results success';
+        }
+
+        function openCoursesPage() {
+            window.open('http://127.0.0.1:8001/courses', '_blank');
+            document.getElementById('navigationResults').textContent = '✅ Opened courses page in new tab';
+            document.getElementById('navigationResults').className = 'results success';
+        }
+
+        // Check if there's a stored token on page load
+        window.onload = function() {
+            const storedToken = localStorage.getItem('token');
+            if (storedToken) {
+                authToken = storedToken;
+                document.getElementById('loginResults').textContent = '✅ Found stored auth token. You can test dashboard APIs directly.';
+                document.getElementById('loginResults').className = 'results info';
+            }
+        };
+    </script>
+</body>
+</html>
